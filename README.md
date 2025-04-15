@@ -1,6 +1,8 @@
 # google-adk-mcp
 
-🚀 Sample project demonstrating how to build a Google ADK agent that uses an external MCP server to interact with a repair API (`repair_world_application`).
+🚀 Sample project demonstrating how to build a Google ADK agent that uses an external MCP server to interact with a repair API ([repairworld application](https://github.com/nikhilpurwant/repair_world_application) - created specifically for the demo).
+
+This agent is created to go along with the blog post and demo - [26. The simplest MCP demo (Includes Sample provider app, MCP Server and Agent 🤖 code and explanation!)](https://nikhilpurwant.com/post/tech-genai-adk-mcp/)
 
 ## 🧠 What This Project Does
 
@@ -9,7 +11,7 @@ This project shows how to:
 1. ✅ Use **Google ADK (Agent Developer Kit)** to build an agent.
 2. 🔌 Connect that agent to an existing **MCP server** that exposes functionality of the `repair_world_application` (e.g., creating and viewing repair requests).
 
-The MCP server is not implemented here — it's assumed to be already available (e.g., from [mcp-server-repairworld](https://github.com/your-org/mcp-server-repairworld)).
+The agent uses MCP server from the pypi repo - [mcp-server-repairworld](https://pypi.org/project/mcp-server-repairworld/).
 
 ---
 
