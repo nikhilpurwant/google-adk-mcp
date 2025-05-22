@@ -8,6 +8,9 @@ from google.adk.sessions import InMemorySessionService
 from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactService # Optional
 from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, SseServerParams, StdioServerParameters
 import os
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 # Load environment variables from .env file in the parent directory
 # Place this near the top, before using env vars like API keys
@@ -31,7 +34,7 @@ repairworld_api_base = os.environ.get("REPAIRWORLD_API_BASE")
 async def get_tools_async():
   """Gets tools from the MCP Server."""
   print("Attempting to connect to the MCP server...")
-  tools, exit_stack = await MCPToolset.from_server(
+  tools = await MCPToolset(
       # Use StdioServerParameters for local process communication
       connection_params=StdioServerParameters(
           command='python', # Command to run the server
@@ -44,24 +47,35 @@ async def get_tools_async():
       )
       # For remote servers, you would use SseServerParams instead:
       # connection_params=SseServerParams(url="http://remote-server:port/path", headers={...})
-  )
+  ).get_tools()
   print("MCP Toolset created successfully.")
   # MCP requires maintaining a connection to the local MCP Server.
   # exit_stack manages the cleanup of this connection.
-  return tools, exit_stack
+  return tools
 
 # --- Step 2: Agent Definition ---
 async def get_agent_async():
   """Creates an ADK Agent equipped with tools from repairworld MCP Server."""
-  tools, exit_stack = await get_tools_async()
-  print(f"Fetched {len(tools)} tools from MCP server.")
+  # tools = await get_tools_async()
+  # print(f"Fetched {len(tools)} tools from MCP server.")
   root_agent = LlmAgent(
       model='gemini-2.0-flash', # Adjust model name if needed based on availability
       name='repairworld_assistent',
       instruction='Help user interact with repair-world application.',
-      tools=tools, # Provide the MCP tools to the ADK agent
+      tools=[MCPToolset(
+      # Use StdioServerParameters for local process communication
+      connection_params=StdioServerParameters(
+          command='python', # Command to run the server
+          args=["-m", # Arguments for the command
+                "mcp_server_repairworld",    
+                "--api-key",
+                repairworld_api_key,
+                "--api-base",
+                repairworld_api_base] 
+      )
+  )], # Provide the MCP tools to the ADK agent
   )
-  return root_agent, exit_stack
+  return root_agent
 
 
 def print_event(event):
@@ -97,12 +111,12 @@ async def async_main():
   # Artifact service might not be needed for this example
   artifacts_service = InMemoryArtifactService()
 
-  session = session_service.create_session(
+  session = await session_service.create_session(
       state={}, app_name='mcp_filesystem_app', user_id='user_fs'
   )
 
 
-  root_agent, exit_stack = await get_agent_async()
+  root_agent = await get_agent_async()
 
   runner = Runner(
       app_name='mcp_filesystem_app',
@@ -129,7 +143,12 @@ async def async_main():
 
   # Crucial Cleanup: Ensure the MCP server process connection is closed.
   print("Closing MCP server connection...")
-  await exit_stack.aclose()
+  # await exit_stack.aclose()
+
+  for mcp_toolset in root_agent.tools:
+    print(f"Closing {mcp_toolset}")
+    await mcp_toolset.close()
+
   print("Cleanup complete.")
 
 if __name__ == '__main__':
